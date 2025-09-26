@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tıklama Hızı Oyunu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Sağ-sol ve yukarı-aşağı kaydırmayı engeller */
+            touch-action: none; /* Dokunmatik cihazlarda yakınlaştırmayı engeller */
+            overscroll-behavior: none;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+        .no-select {
+            -webkit-touch-callout: none; /* iOS Safari */
+            -webkit-user-select: none; /* Safari, Chrome, Opera, Edge */
+            -khtml-user-select: none; /* Konqueror HTML */
+            -moz-user-select: none; /* Old versions of Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently supported by Chrome, Opera and Firefox */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center h-screen w-screen no-select">
+
+    <div class="w-full max-w-md mx-auto text-center p-4 md:p-6">
+        
+        <!-- Oyun Alanı -->
+        <div id="game-area" class="bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-10 mb-6 transition-all duration-300">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2 text-cyan-400">Tıklama Oyunu</h1>
+            <p class="text-gray-400 mb-6">10 Saniyede Rekorunu Kır!</p>
+
+            <!-- Zaman ve Skor Göstergesi -->
+            <div class="flex justify-around mb-8 text-2xl font-semibold">
+                <div>
+                    <span class="text-sm uppercase text-gray-500">Kalan Süre</span>
+                    <p id="timer" class="text-4xl md:text-5xl text-amber-400">10</p>
+                </div>
+                <div>
+                    <span class="text-sm uppercase text-gray-500">Skor</span>
+                    <p id="score" class="text-4xl md:text-5xl text-green-400">0</p>
+                </div>
+            </div>
+
+            <!-- Butonlar -->
+            <div id="button-container" class="h-24">
+                <button id="startButton" class="w-full h-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-2xl py-4 px-4 rounded-xl transition duration-300 transform hover:scale-105 shadow-lg">
+                    BAŞLA
+                </button>
+
+                <button id="clickButton" class="w-full h-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-bold text-2xl py-4 px-4 rounded-xl transition duration-100 transform active:scale-95 shadow-lg hidden">
+                    TIKLA!
+                </button>
+                
+                <div id="endGameButtons" class="hidden flex space-x-4 h-full">
+                    <button id="saveButton" class="w-1/2 h-full bg-blue-500 hover:bg-blue-600 text-white font-bold text-xl py-4 px-4 rounded-xl transition duration-300 transform hover:scale-105">
+                        Kaydet
+                    </button>
+                    <button id="retryButton" class="w-1/2 h-full bg-gray-600 hover:bg-gray-700 text-white font-bold text-xl py-4 px-4 rounded-xl transition duration-300 transform hover:scale-105">
+                        Tekrar Dene
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sıralama Tablosu -->
+        <div class="w-full bg-gray-800 rounded-2xl shadow-xl p-4 md:p-6">
+            <h2 class="text-2xl font-bold mb-4 text-center text-cyan-400">Sıralama</h2>
+            <ol id="leaderboard" class="list-decimal list-inside text-left space-y-2 text-gray-300">
+                <!-- Skorlar buraya eklenecek -->
+            </ol>
+        </div>
+
+    </div>
+
+    <script>
+        // DOM Elementleri
+        const timerElement = document.getElementById('timer');
+        const scoreElement = document.getElementById('score');
+        const startButton = document.getElementById('startButton');
+        const clickButton = document.getElementById('clickButton');
+        const endGameButtons = document.getElementById('endGameButtons');
+        const saveButton = document.getElementById('saveButton');
+        const retryButton = document.getElementById('retryButton');
+        const leaderboard = document.getElementById('leaderboard');
+
+        // Oyun Değişkenleri
+        let score = 0;
+        let timeLeft = 10;
+        let timerInterval = null;
+        let gameActive = false;
+        
+        // LocalStorage Anahtarı
+        const SCORES_KEY = 'clickerGameScores';
+
+        // Olay İzleyicileri
+        startButton.addEventListener('click', startGame);
+        clickButton.addEventListener('click', () => {
+            if (gameActive) {
+                score++;
+                scoreElement.textContent = score;
+            }
+        });
+        retryButton.addEventListener('click', resetGame);
+        saveButton.addEventListener('click', saveScore);
+
+        // Fonksiyonlar
+        function startGame() {
+            resetGameValues();
+            gameActive = true;
+            
+            startButton.classList.add('hidden');
+            endGameButtons.classList.add('hidden');
+            clickButton.classList.remove('hidden');
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = timeLeft;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+        }
+        
+        function endGame() {
+            clearInterval(timerInterval);
+            gameActive = false;
+            clickButton.classList.add('hidden');
+            if(score > 0){
+                endGameButtons.classList.remove('hidden');
+                endGameButtons.classList.add('flex');
+            } else {
+                 startButton.classList.remove('hidden');
+            }
+        }
+
+        function resetGame() {
+            resetGameValues();
+            endGameButtons.classList.add('hidden');
+            endGameButtons.classList.remove('flex');
+            clickButton.classList.add('hidden');
+            startButton.classList.remove('hidden');
+        }
+        
+        function resetGameValues() {
+            score = 0;
+            timeLeft = 10;
+            scoreElement.textContent = score;
+            timerElement.textContent = timeLeft;
+            clearInterval(timerInterval);
+        }
+
+        function saveScore() {
+            const name = prompt("Skorunu kaydetmek için adını gir:", "Oyuncu") || "İsimsiz";
+            if (name) {
+                const scores = getScores();
+                scores.push({ name, score });
+                scores.sort((a, b) => b.score - a.score); // En yüksekten düşüğe sırala
+                localStorage.setItem(SCORES_KEY, JSON.stringify(scores));
+                renderLeaderboard();
+                resetGame();
+            }
+        }
+
+        function getScores() {
+            const scores = localStorage.getItem(SCORES_KEY);
+            return scores ? JSON.parse(scores) : [];
+        }
+
+        function renderLeaderboard() {
+            leaderboard.innerHTML = '';
+            const scores = getScores();
+            if (scores.length === 0) {
+                leaderboard.innerHTML = '<li class="text-gray-500">Henüz kayıtlı skor yok.</li>';
+            } else {
+                scores.slice(0, 10).forEach((s, index) => { // Sadece ilk 10 skoru göster
+                    const li = document.createElement('li');
+                    li.className = 'p-2 rounded-lg flex justify-between items-center';
+                    li.classList.add(index % 2 === 0 ? 'bg-gray-700' : 'bg-gray-700/50');
+                    
+                    let medal = '';
+                    if (index === 0) medal = '🥇';
+                    else if (index === 1) medal = '🥈';
+                    else if (index === 2) medal = '🥉';
+
+                    li.innerHTML = `
+                        <span>${medal} ${s.name}</span>
+                        <span class="font-bold text-lg text-cyan-300">${s.score}</span>
+                    `;
+                    leaderboard.appendChild(li);
+                });
+            }
+        }
+
+        /*
+            --- HİLE ÖZELLİĞİ / KONSOL KULLANIMI ---
+            Chrome'da F12 tuşuna basarak Geliştirici Araçları'nı açın ve "Console" sekmesine gidin.
+            Aşağıdaki komutları kullanarak sıralamayı düzenleyebilirsiniz:
+
+            1. Sıralamadaki tüm skorları görmek için:
+               console.log(JSON.parse(localStorage.getItem('clickerGameScores')));
+
+            2. Sıralamaya yeni bir skor eklemek için (Örnek: 'Hacker' adına 999 skor ekler):
+               let scores = JSON.parse(localStorage.getItem('clickerGameScores')) || [];
+               scores.push({ name: 'Hacker', score: 999 });
+               scores.sort((a, b) => b.score - a.score);
+               localStorage.setItem('clickerGameScores', JSON.stringify(scores));
+               location.reload(); // Değişikliği görmek için sayfayı yeniler
+
+            3. Tüm skorları silmek için:
+               localStorage.removeItem('clickerGameScores');
+               location.reload();
+        */
+
+        // Sayfa ilk yüklendiğinde sıralamayı göster
+        document.addEventListener('DOMContentLoaded', renderLeaderboard);
+
+    </script>
+</body>
+</html>
+
